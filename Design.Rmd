@@ -1,0 +1,24 @@
+---
+title: "About the PGH MultiModal Transit Tool"
+author: "Adam Peterson"
+date: "11/15/2021"
+output: html_document
+bibliography: pgh_ptmm.bib
+---
+
+```{r setup, include=FALSE,echo=F}
+knitr::opts_chunk$set(echo = FALSE)
+## TODO: Fill out Design Doc 
+```
+
+## Introduction
+
+The Propensity to Cycle Tool (PCT) [@lovelace2017propensity] offers an 
+intuitive way to understand where and to what extent residents of the UK 
+utilize cycling as a mode of transit for their daily work commute. Our project 
+aims to replicate and extend the work of the PCT in the city of Pittsburgh.
+
+## Methods
+
+
+## References
