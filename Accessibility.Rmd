@@ -1,0 +1,158 @@
+---
+title: "PGH Accessibility"
+author: "Adam Peterson"
+date: "11/25/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(sf)
+library(xml2)
+library(mapsapi)
+set.seed(34231)
+## loads in google API key
+source("keyfile.R")
+url <- "https://data.wprdc.org/dataset/ece64ad3-05eb-46dd-ba38-c83b5373812f/resource/3f40b94b-4ac4-48f1-8c61-8439d2d2f420/download/wprdc_stop_data.csv"
+```
+
+
+
+
+* Sample points near bus routes in each neighborhood.
+* calculate trip distance to calculate accessibility index
+by looking at trip time/distance to: 
+
+1. nearest grocery store
+2. downtown
+3. commute (using sample)
+4. other areas of interest (e.g. Univ., hospital, etc.)
+
+By mode of transit 
+
+* bike (owned vs. share)
+* bus
+* car
+* walk
+* scooter 
+
+
+Taking into account
+
+* Level of stress (bike)
+* park/traffic hassle
+* scooter access (if data)
+* COST!! 
+
+```{r datasets}
+bdf <- read_csv(url) %>% 
+    st_as_sf(.,coords=c("longitude","latitude")) %>% 
+    st_set_crs(4326)
+
+
+brdf <- read_sf("~/Documents/CityData/Burgh/paac_routes_1909/PAAC_Routes_1909.shp")
+
+lots <- read_sf("~/Documents/CityData/Burgh/Zoning/Zoning.shp")
+
+hoods <- read_sf("~/Documents/CityData/Burgh/Neighborhoods/Neighborhoods_.shp") %>%
+    select(objectid,hood) %>%
+    st_transform(4326)
+
+```
+
+
+```{r}
+lots %>% filter(str_detect(legendtype,"Neighborhood|Residential|Public"))
+## Downloaded from https://www.pasda.psu.edu/uci/DataSummary.aspx?dataset=1214
+pcls <- read_sf("~/Documents/CityData/Burgh/AlleghenyCounty_Parcels202111/AlleghenyCounty_Parcels202111.shp")
+```
+
+
+```{r}
+resid <- lots %>% filter(str_detect(legendtype,"Neighborhood|Residential|Public"))
+residpcls <- pcls %>% 
+    mutate(valid = map_lgl(geometry,st_is_valid)) %>% 
+    filter(valid == TRUE) %>% 
+    st_filter(resid,join = st_contains) %>% 
+    st_transform(st_crs(hoods)) %>% 
+    st_join(hoods) %>% 
+    filter(hood=="Shadyside") %>% 
+    st_centroid()
+```
+
+
+```{r}
+shdysample <- residpcls %>% st_sample(100) %>% st_set_crs(4326)
+origin <- as.matrix(shdysample[[1]])
+destinations <- c("Shadyside UPMC",
+                  "Giant Eagle",
+                  "Point State Park",
+                  "Schenley Park")
+
+query_google <- function(origins,
+                         destinations,
+                         key,
+                         traffic_model = "best_guess",
+                         depart_time = as.POSIXct("2021-11-29 08:00:00 EST")){
+    
+    query_modes_and_process <- function(origins,
+                                  destinations,
+                                  mode,
+                                  traffic_model,
+                                  depart_time){
+        
+        process <- function(query_result,data_val = "distance_m"){
+            out <- as_tibble(mp_get_matrix(as_xml_document(query_result), 
+                             value = data_val),
+                             rownames = "Origin") %>% 
+             mutate(trip_ix = 1:n()) %>% 
+             gather(everything(),-trip_ix,-Origin,
+                    key = "Destination",value = !!data_val) %>% 
+             mutate(trip_ix2 = 1:n()) %>% 
+                gather({{data_val}},key = "TripDataType", value = "TripData")
+            return(out)
+        }
+        
+        foo <- mp_matrix(origins = origins,
+                       destinations = destinations,
+                       mode = mode,
+                       key = key,
+                       departure_time = depart_time,
+                       traffic_model = traffic_model,
+                       quiet = TRUE)
+        out <- map_dfr(c("distance_m","duration_s","duration_in_traffic_s"), 
+                       function(data_val) process(foo,data_val) %>%
+                           mutate(transit_mode = mode))
+        return(out)
+        
+    }
+    
+    out <- map_dfr(c("driving","transit","walking","bicycling"), function(mode){
+                query_modes_and_process(origins,destinations,mode,
+                                        traffic_model,depart_time)})
+    origin_latlong <- tibble(trip_ix = 1:nrow(origins),
+                             lat = origins[,2],
+                             long = origins[,1])
+    out <- out %>% left_join(origin_latlong,by="trip_ix")
+    return(out)
+}
+```
+
+
+```{r,eval = FALSE}
+shxdf <- query_google(origins = origin,
+                      destinations = destinations,
+                      key = key)
+```
+
+
+```{r}
+shxdf <- read_csv("~/Documents/CityData/Burgh/Google_Accessibility/shadyside.csv")
+shxdf %>% mutate(TripData = case_when(TripDataType == "distance_m" ~ TripData / 1000,
+                                      TripDataType == "duration_s" ~ TripData / 60,
+                                      TRUE ~ TripData / 60)) %>% 
+    group_by(Destination,transit_mode,TripDataType) %>% 
+    summarise(avg = mean(TripData),
+              sprd = var(TripData))
+```

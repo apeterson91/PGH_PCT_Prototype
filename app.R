@@ -2,17 +2,22 @@
 library(shiny)
 library(leaflet)
 library(tidyverse)
+library(shinyjs)
 library(sf)
 
 
-hood_pop <- read_csv("~/Documents/CityData/Burgh/hood_population.csv")
-
+#hood_pop <- read_csv("~/Documents/CityData/Burgh/hood_population.csv")
+  
 hoods <- read_sf("~/Documents/CityData/Burgh/Neighborhoods/Neighborhoods_.shp") %>%
     select(objectid,hood) %>%
     st_transform(4326) %>%
-    left_join(hood_pop) %>%
+#    left_join(hood_pop) %>%
     ## prob taken from https://bikeleague.org/sites/default/files/LAB_Where_We_Ride_2016.pdf
     mutate(cycles = rbeta(n = n(), shape1 =  26 , shape2 = 1000 ))
+
+stdf <- read_sf("~/Documents/CityData/Burgh/alleghenycounty_streetcenterlines202107/AlleghenyCounty_StreetCenterlines202107.shp") %>% 
+  st_transform(st_crs(hoods)) %>% 
+  st_filter(hoods)
 
 labels <-  levels(cut(hoods$cycles,
                breaks = quantile(hoods$cycles,probs = c(0,0.25,0.5,0.75,1)),
@@ -133,8 +138,8 @@ server <- function(input, output) {
 
         switch(input_purpose(),
                "commute" = { legend_title <- "% cycling to work"},
-               "school" = { legend_title <-  "% cycling to school"},
-               "alltrips" = {legend_title <- "% trips cycled"}
+               "groceries" = { legend_title <-  "% cycling to groceries"},
+               "social" = {legend_title <- "% social trips cycled"}
                )
         leafletProxy("map") %>%
             addLegend("topleft",
