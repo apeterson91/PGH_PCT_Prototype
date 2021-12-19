@@ -9,6 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(sf)
+library(mapview)
+mapviewOptions(platform ='leafgl')
 library(xml2)
 library(mapsapi)
 set.seed(34231)
@@ -63,7 +65,6 @@ hoods <- read_sf("~/Documents/CityData/Burgh/Neighborhoods/Neighborhoods_.shp") 
 
 
 ```{r}
-lots %>% filter(str_detect(legendtype,"Neighborhood|Residential|Public"))
 ## Downloaded from https://www.pasda.psu.edu/uci/DataSummary.aspx?dataset=1214
 pcls <- read_sf("~/Documents/CityData/Burgh/AlleghenyCounty_Parcels202111/AlleghenyCounty_Parcels202111.shp")
 ```
@@ -83,7 +84,7 @@ residpcls <- pcls %>%
 
 
 ```{r}
-shdysample <- residpcls %>% st_sample(100) %>% st_set_crs(4326)
+shdysample <- residpcls %>% st_sample(size = 100) %>% st_set_crs(4326) 
 origin <- as.matrix(shdysample[[1]])
 destinations <- c("Shadyside UPMC",
                   "Giant Eagle",
@@ -155,4 +156,27 @@ shxdf %>% mutate(TripData = case_when(TripDataType == "distance_m" ~ TripData / 
     group_by(Destination,transit_mode,TripDataType) %>% 
     summarise(avg = mean(TripData),
               sprd = var(TripData))
+```
+
+
+## r5r 
+
+```{r}
+options(java.parameters = "-Xmx2G")
+library(r5r)
+origins_r5r <- shdysample %>% st_cast(.,"POINT") %>% 
+    st_sf() %>% mutate(id=1:n()) 
+destinations_r5r <- c(st_point(c(-79.919479,40.459080)),
+                      st_point(c(-79.921059,40.458851)),
+                      st_point(c(-79.928703,40.458569)) 
+) %>% 
+    st_sfc() %>% 
+    st_cast(.,"POINT") %>% 
+    st_sf() %>% 
+    mutate(id=c("Trader Joes","Giant Eagle","Whole Foods"))
+```
+
+
+```{r}
+r5r_core <- setup_r5(data_path = "~/Documents/CityData/Burgh/TransitNetworkData/")
 ```

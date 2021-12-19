@@ -7,7 +7,7 @@ library(sf)
 
 
 #hood_pop <- read_csv("~/Documents/CityData/Burgh/hood_population.csv")
-  
+
 hoods <- read_sf("~/Documents/CityData/Burgh/Neighborhoods/Neighborhoods_.shp") %>%
     select(objectid,hood) %>%
     st_transform(4326) %>%
@@ -15,9 +15,11 @@ hoods <- read_sf("~/Documents/CityData/Burgh/Neighborhoods/Neighborhoods_.shp") 
     ## prob taken from https://bikeleague.org/sites/default/files/LAB_Where_We_Ride_2016.pdf
     mutate(cycles = rbeta(n = n(), shape1 =  26 , shape2 = 1000 ))
 
-stdf <- read_sf("~/Documents/CityData/Burgh/alleghenycounty_streetcenterlines202107/AlleghenyCounty_StreetCenterlines202107.shp") %>% 
-  st_transform(st_crs(hoods)) %>% 
-  st_filter(hoods)
+stdf <- read_sf("~/Documents/CityData/Burgh/alleghenycounty_streetcenterlines202107/AlleghenyCounty_StreetCenterlines202107.shp") %>%
+  st_transform(st_crs(hoods)) %>%
+  st_filter(hoods) %>%
+  st_join(hoods %>% select(hood)) %>%
+  select(OBJECTID,FULL_NAME,hood,geometry)
 
 labels <-  levels(cut(hoods$cycles,
                breaks = quantile(hoods$cycles,probs = c(0,0.25,0.5,0.75,1)),
@@ -62,7 +64,7 @@ get_colour_palette <- function(colourscale, bins = 10){
 }
 
 ui <- navbarPage(
-    title = "PGH MultiModal Propensity Map",
+    title = "Pittsburgh Transit Propensity Tool",
     id = "nav",
     tabPanel(
         "Map",
@@ -80,7 +82,7 @@ ui <- navbarPage(
                 width = 330, height = "auto",
                 #style = "opacity: 0.9 z-index: 1; position: absolute",
                 tags$div(title = "Show/Hide Panel",
-                         a(
+                         a(##TODO: Fix this button
                              id = "toggle_panel",
                              style = "font-size: 80%",
                              span(class = "glyphicon glyphicon-circle-arrow-up",
@@ -95,9 +97,15 @@ ui <- navbarPage(
             ),
             )
     ),
+    tabPanel("About",includeMarkdown("About.Rmd")),
     tabPanel("Region Stats"),
-    tabPanel("National Data"),
-    tabPanel("About",includeMarkdown("Design.Rmd"))
+    tabPanel("Trip Entry",
+             useShinyjs(),
+             div(
+               class = "outer",
+               tags$head(includeCSS("styles.css")),
+               leafletOutput("tripmap",width = "100%",height = "100%"))
+    )
 )
 
 server <- function(input, output) {
@@ -109,9 +117,6 @@ server <- function(input, output) {
             input$purpose
         }
     })
-    ## TODO: change popup on click to popup on hover and only contain hood name
-    ## TODO: Add zoom-to-neighborhood on click
-    ## TODO: add in street level geometry
     output$map <- renderLeaflet(
         isolate(
             leaflet(hoods) %>%
@@ -151,14 +156,49 @@ server <- function(input, output) {
     })
 
     observe({
-        leafletProxy("map") %>% clearPopups()
+        leafletProxy("map") %>%
+          clearPopups()
         event <- input$map_shape_click
         if(is.null(event))
             return()
         isolate({
+            if(!is.null(event$id)){
+              leafletProxy("map") %>%
+                clearGroup("streets")
+            }
+          hd <- event$id
+           local_lines <- stdf %>% filter(hood == {{hd}})
+            leafletProxy("map") %>%
+            flyTo(lng = event$lng,
+                  lat = event$lat,
+                  zoom = 15) %>%
+            addPolylines(data = local_lines,
+                         group = "streets",
+                         color='red')
             showHoodPopup(event$id,event$lat,event$lng)
         })
     })
+
+    ## TODO(petersonadam): https://shiny.rstudio.com/articles/overview.html
+    ## for persistent data storage -- see about getting db storgae from GCP?
+    output$tripmap <- renderLeaflet(
+      isolate(
+        leaflet(stdf) %>%
+          addProviderTiles(providers$Stamen.TonerLite,
+                           options = providerTileOptions(noWrap = TRUE)) %>%
+          addPolylines(color = "#444444",
+                      weight = 1,
+                      smoothFactor = 0.5,
+                      opacity = 0.80,
+                      layerId = ~OBJECTID,
+                      options = pathOptions(clickable = T),
+                      labelOptions = labelOptions(direction = 'auto'),
+                      highlightOptions = highlightOptions(color = "white",
+                                                          weight = 2,
+                                                          bringToFront = TRUE)
+          )
+      )
+    )
 
 }
 

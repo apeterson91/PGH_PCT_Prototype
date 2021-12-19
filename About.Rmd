@@ -1,0 +1,87 @@
+---
+title: "About the PGH MultiModal Transit Tool"
+author: "Adam Peterson"
+date: "11/15/2021"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+
+bibliography: pgh_ptmm.bib
+---
+
+```{r setup, include=FALSE,echo=F}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+# Introduction
+
+
+Having to have a car in order to live your daily life makes things more 
+difficult. Whether it's the time spent waiting in traffic, the cost of 
+buying, fueling and maintaining the car or simply the noise and other 
+environmental consequences of a car-dominant transit system, car dependency 
+cripples the ability of individuals to live their lives to the fullest.
+
+
+Charting a path from the current state of infrastructure in U.S. cities to a 
+place of independence from cars is no simple feat, however. The car has been 
+the dominant mode of transit in the U.S. since the 1950s and zoning 
+and land use patterns have reinforced the place of the car as a necessity
+within the average American's daily life. Perhaps the greatest challenge,
+as with any abstract endeavor, is setting out a normative standard by which 
+to orient one's efforts; what does a car-independent lifestyle look like? 
+Amsterdam, Copenhagen, New York City and other cities, offer several several 
+points of reference in their use of bike infrastructure, high density zoning 
+and public transit. Furthermore they show that a city need not offer a 
+car-free solution to every trip that a resident might take, but rather 
+focus on the *majority* of the trips that an individual takes --- those trips 
+to the grocery store, work, urban green space and commercial or public spaces 
+that form the bulk of trips for most.
+
+
+With this principle in mind, we propose to develop and adapt the the Propensity
+to Cycle Tool (PCT) [@lovelace2017propensity] which offers an intuitive way to 
+understand where and to what extent residents of the UK 
+utilize cycling as a mode of transit for their daily work commute. Our project 
+aims to adapt and extend the work of the PCT to the city of Pittsburgh in 
+order to map how and where individuals move around the city.
+
+## The Pittsburgh Transit Propensity Transit Tool (PTPT)
+
+While the high-level motivation for decreasing car-dependency and improving 
+bicycle and other modes of transit is strong, this doesn't yet motivate 
+what the PTT can provide specifically towards furthering this effort. 
+So, what kinds of transit-policy relevant questions can the PTPT answer or help 
+to answer?
+
+Broadly, it can provide a pulse on how individuals maneuver around
+their built environment and identify what features --- whether they be 
+features of the built environment like a bus route or bike lane 
+or person level features like age or SES --- can influence
+the mode of transit for a given route.
+
+More specifically the PTPT aims to identify and help differentiate between
+what's possible or feasible as a mode of transit and what actually occurs. 
+There are previous tools available like the 
+[walkscore](https://www.walkscore.com/), 
+[bike score](https://www.walkscore.com/bike-score-methodology.shtml) and 
+[transit score](https://www.walkscore.com/transit-score-methodology.shtml) which 
+use density, zoning patterns, bike infrastructure and transit schedules/layouts 
+to construct a measure of accessibility based upon what is possible, the 
+PTPT 
+
+
+## Methods
+
+### Stage Zero: Simulated Data
+
+### Stage One: Proof of Concept Convenience Sample
+
+### Stage Two: Designed Sample
+
+## Current Implementation
+
+## References
